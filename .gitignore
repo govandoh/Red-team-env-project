@@ -1,4 +1,7 @@
-"evidence/" 
-"*.pcap" 
-"*.log" 
-".env" 
+evidence/
+!evidence/**/.gitkeep
+*.pcap
+*.log
+*.tar.gz
+*.gz
+.env

@@ -1,0 +1,121 @@
+name: red-team-lab
+
+networks:
+  lab-net:
+    name: lab-net
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+          gateway: 172.20.0.1
+
+volumes:
+  suricata-logs:
+
+services:
+
+  # =====================================================
+  # ATACANTE — Red Team
+  # =====================================================
+  kali:
+    build:
+      context: ./kali
+      dockerfile: Dockerfile
+    image: redteam/kali:latest
+    container_name: redteam-kali
+    hostname: kali-attacker
+    networks:
+      lab-net:
+        ipv4_address: 172.20.0.10
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - ../scripts:/root/scripts:ro
+      - ../playbooks:/root/playbooks:ro
+      - ../evidence:/root/loot
+    working_dir: /root
+    tty: true
+    stdin_open: true
+    stop_signal: SIGKILL
+    command: /bin/bash
+
+  # =====================================================
+  # OBJETIVO — Metasploitable2
+  # Servicios expuestos: SSH(22), Telnet(23), FTP(21),
+  # HTTP(80), SMB(139,445), MySQL(3306), PostgreSQL(5432),
+  # VNC(5900), entre otros.
+  # =====================================================
+  target-server:
+    image: tleemcjr/metasploitable2:latest
+    container_name: blueteam-target
+    hostname: vulnerable-server
+    networks:
+      lab-net:
+        ipv4_address: 172.20.0.20
+    restart: unless-stopped
+
+  # =====================================================
+  # CLIENTES — topología realista (perfil: full)
+  # =====================================================
+  client-1:
+    image: ubuntu:22.04
+    container_name: blueteam-client-1
+    hostname: client-1
+    networks:
+      lab-net:
+        ipv4_address: 172.20.0.30
+    command: ["sleep", "infinity"]
+    profiles: [full]
+
+  client-2:
+    image: ubuntu:22.04
+    container_name: blueteam-client-2
+    hostname: client-2
+    networks:
+      lab-net:
+        ipv4_address: 172.20.0.31
+    command: ["sleep", "infinity"]
+    profiles: [full]
+
+  # =====================================================
+  # OBSERVABILIDAD — Opción A (perfil: observability)
+  #
+  # IMPORTANTE: el nombre de la interfaz (-i br-XXXX) es
+  # dinámico. Resolverlo con:
+  #   docker network inspect lab-net --format '{{.Id}}' | cut -c1-12 | xargs -I{} echo "br-{}"
+  # Luego editar el campo -i antes de levantar este perfil,
+  # o usar start-pcap.sh que lo resuelve automáticamente.
+  # =====================================================
+  ntopng:
+    image: ntop/ntopng:stable
+    container_name: lab-ntopng
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    command:
+      - "--community"
+      - "-i"
+      - "br-lab"
+      - "-w"
+      - "3000"
+    profiles: [observability]
+
+  # =====================================================
+  # IDS — Suricata (perfil: advanced)
+  # =====================================================
+  suricata:
+    image: jasonish/suricata:latest
+    container_name: lab-suricata
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_NICE
+    volumes:
+      - suricata-logs:/var/log/suricata
+    command:
+      - "-i"
+      - "br-lab"
+    profiles: [advanced]
