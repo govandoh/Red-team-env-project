@@ -2,6 +2,7 @@ nmap
 hydra
 nikto
 gobuster
+dirb
 enum4linux
 hping3
 slowhttptest

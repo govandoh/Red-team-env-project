@@ -8,8 +8,22 @@ EVIDENCE_DIR=$(init_evidence_dir "phase-3-enumeration")
 banner "Phase 3 — HTTP enumeration"
 
 PORT="${1:-80}"
-WORDLIST="${2:-/usr/share/wordlists/dirb/common.txt}"
 URL="http://${LAB_TARGET}:${PORT}"
+
+# Buscar wordlist en orden de preferencia
+WORDLIST="${2:-}"
+if [[ -z "$WORDLIST" ]]; then
+    for candidate in \
+        /usr/share/wordlists/dirb/common.txt \
+        /usr/share/dirb/wordlists/common.txt \
+        /usr/share/metasploit-framework/data/wordlists/http_owa_common.txt; do
+        if [[ -f "$candidate" ]]; then
+            WORDLIST="$candidate"
+            break
+        fi
+    done
+fi
+[[ -z "$WORDLIST" ]] && { log ERROR "No wordlist found. Install dirb or pass path as arg 2."; exit 1; }
 
 log INFO "Target URL: ${URL}"
 
@@ -28,7 +42,7 @@ log INFO "Running whatweb"
 whatweb -v "${URL}" > "${EVIDENCE_DIR}/whatweb.txt" 2>&1 || true
 
 log INFO "HTTP findings summary:"
-grep -E "(+ |200|301|403)" "${EVIDENCE_DIR}/gobuster.txt" \
+grep -E "(200|301|403|Found)" "${EVIDENCE_DIR}/gobuster.txt" \
     | head -20 | tee -a "${EVIDENCE_DIR}/run.log" || true
 
 finalize

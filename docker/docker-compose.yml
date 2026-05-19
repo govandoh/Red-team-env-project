@@ -53,6 +53,10 @@ services:
     networks:
       lab-net:
         ipv4_address: 172.20.0.20
+    privileged: true
+    # Sin tty: true la CMD original (bash al final) sale inmediatamente.
+    # services.sh arranca todos los servicios vulnerables; tail -f /dev/null mantiene el contenedor.
+    command: sh -c "/bin/services.sh && tail -f /dev/null"
     restart: unless-stopped
 
   # =====================================================

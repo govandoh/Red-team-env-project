@@ -8,8 +8,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PASS=0
 FAIL=0
 
-ok()   { echo "[PASS] $*"; ((PASS++)); }
-fail() { echo "[FAIL] $*"; ((FAIL++)); }
+ok()   { echo "[PASS] $*"; PASS=$((PASS + 1)); }
+fail() { echo "[FAIL] $*"; FAIL=$((FAIL + 1)); }
 
 # --- Test 1: source sin errores ---
 # shellcheck source=common.sh
@@ -24,17 +24,13 @@ log INFO "test message"
 [[ -f "${EVIDENCE_DIR}/run.log" ]] && ok "log writes run.log" || fail "log did not write run.log"
 
 # --- Test 4: validate_target rechaza IP fuera de subred ---
-set +e
-validate_target "192.168.1.1" 2>/dev/null
-EXIT_CODE=$?
-set -e
+EXIT_CODE=0
+( validate_target "192.168.1.1" ) 2>/dev/null || EXIT_CODE=$?
 [[ "$EXIT_CODE" -eq 2 ]] && ok "validate_target rejects out-of-subnet IP" || fail "validate_target did not reject 192.168.1.1 (exit: $EXIT_CODE)"
 
 # --- Test 5: validate_target acepta IP válida ---
-set +e
-validate_target "172.20.0.20" 2>/dev/null
-EXIT_CODE=$?
-set -e
+EXIT_CODE=0
+( validate_target "172.20.0.20" ) 2>/dev/null || EXIT_CODE=$?
 [[ "$EXIT_CODE" -eq 0 ]] && ok "validate_target accepts 172.20.0.20" || fail "validate_target rejected valid IP (exit: $EXIT_CODE)"
 
 # --- Test 6: finalize no falla ---
