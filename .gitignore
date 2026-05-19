@@ -1,0 +1,4 @@
+"evidence/" 
+"*.pcap" 
+"*.log" 
+".env" 
