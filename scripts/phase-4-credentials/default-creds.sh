@@ -13,9 +13,18 @@ echo "service,user,password,result" > "$RESULTS"
 
 try_ssh() {
     local user="$1" pass="$2"
-    sshpass -p "$pass" ssh -o StrictHostKeyChecking=no \
+    # Metasploitable2 corre OpenSSH 4.7p1 con algoritmos legacy:
+    # - KexAlgorithms: diffie-hellman-group1-sha1
+    # - MACs: hmac-md5, hmac-sha1 (no SHA-2)
+    # - HostKey: ssh-rsa (aceptado con PubkeyAcceptedAlgorithms)
+    sshpass -p "$pass" ssh \
+        -o StrictHostKeyChecking=no \
         -o ConnectTimeout=5 \
         -o BatchMode=no \
+        -o KexAlgorithms=+diffie-hellman-group1-sha1 \
+        -o "MACs=+hmac-md5,hmac-sha1" \
+        -o HostKeyAlgorithms=+ssh-rsa \
+        -o PubkeyAuthentication=no \
         "${user}@${LAB_TARGET}" "id" 2>/dev/null && echo "SUCCESS" || echo "FAILED"
 }
 

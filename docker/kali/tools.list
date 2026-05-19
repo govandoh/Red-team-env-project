@@ -23,4 +23,5 @@ jq
 iputils-ping
 iproute2
 sshpass
+openssh-client
 ftp
