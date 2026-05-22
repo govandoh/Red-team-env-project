@@ -25,3 +25,5 @@ iproute2
 sshpass
 openssh-client
 ftp
+default-mysql-client
+postgresql-client
