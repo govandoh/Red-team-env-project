@@ -1,0 +1,26 @@
+# Postfix — Open Relay (intencionalmente vulnerable - lab academico)
+myhostname = bt-mail.lab.local
+mydomain = lab.local
+myorigin = $mydomain
+
+inet_interfaces = all
+inet_protocols = ipv4
+
+# OPEN RELAY: acepta relay desde cualquier origen
+mynetworks = 0.0.0.0/0
+relay_domains = *
+
+# Sin restricciones de relay ni destinatario
+smtpd_recipient_restrictions = permit_mynetworks, permit_all
+smtpd_relay_restrictions     = permit_mynetworks, permit_all
+
+# Rate limiting desactivado — vulnerable a SMTP flood
+smtpd_client_connection_rate_limit = 0
+smtpd_client_message_rate_limit    = 0
+
+# Sin autenticacion SASL requerida
+smtpd_sasl_auth_enable = no
+
+mydestination = $myhostname, localhost.$mydomain, localhost, $mydomain
+
+maillog_file = /dev/stdout

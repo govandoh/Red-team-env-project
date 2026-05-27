@@ -1,0 +1,48 @@
+# Variante del Dockerfile del Kali para GNS3.
+# Diferencia clave: los scripts se empaquetan DENTRO de la imagen porque
+# GNS3 no soporta bind mounts de directorios del host.
+#
+# Construir desde la raiz del proyecto (no desde docker/kali/):
+#   docker build -f docker/kali/Dockerfile.gns3 -t redteam/kali:latest .
+#   docker save redteam/kali:latest -o /tmp/redteam-kali.tar
+#   scp /tmp/redteam-kali.tar gns3@<GNS3_VM_IP>:/tmp/
+#   ssh gns3@<GNS3_VM_IP> docker load -i /tmp/redteam-kali.tar
+
+FROM kalilinux/kali-rolling
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+COPY docker/kali/tools.list /tmp/tools.list
+
+RUN apt-get update && \
+    xargs apt-get install -y --no-install-recommends < /tmp/tools.list && \
+    rm -rf /var/lib/apt/lists/* /tmp/tools.list
+
+# Pre-bundle linpeas para phase-7 (post-explotacion offline)
+RUN curl --fail --location --silent --show-error \
+    "https://github.com/carlospolop/PEASS-ng/releases/latest/download/linpeas.sh" \
+    -o /opt/linpeas.sh && chmod +x /opt/linpeas.sh
+
+# Scripts empaquetados dentro de la imagen (necesario en GNS3 — no hay bind mounts)
+COPY scripts /root/scripts
+COPY playbooks /root/playbooks
+
+# Crear directorio de evidencia (en GNS3 la evidencia vive dentro del contenedor)
+RUN mkdir -p /root/loot
+
+# Entrypoint: configura IP antes de abrir la shell
+RUN printf '#!/bin/bash\n\
+if [ -n "${CONTAINER_IP:-}" ]; then\n\
+    ip addr add "${CONTAINER_IP}/24" dev eth0 2>/dev/null || true\n\
+    ip link set eth0 up\n\
+    ip route add default via "${CONTAINER_GW:-172.20.0.1}" dev eth0 2>/dev/null || true\n\
+fi\n\
+exec "$@"\n' > /entrypoint.sh && chmod +x /entrypoint.sh
+
+ENV CONTAINER_IP=""
+ENV CONTAINER_GW="172.20.0.1"
+
+WORKDIR /root
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["/bin/bash"]
