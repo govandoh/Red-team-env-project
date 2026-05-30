@@ -83,12 +83,25 @@ La topología usa **un único switch Ethernet de capa 2** (`Switch-Central`, 16 
 3. Si está rojo/gris: **Edit → Preferences → GNS3 VM** → marca **Enable the GNS3 VM**, selecciona **VMware Workstation**, elige la VM `GNS3-VM` y pulsa **OK**. Espera a que la barra cambie a verde.
 4. Verificación rápida: **Edit → Preferences → Server** muestra `Main server` con host `192.168.116.128`.
 
-### Paso 2.3 — Abrir el proyecto
+### Paso 2.3 — Abrir el proyecto (IMPORTANTE: usar Import, no Open)
 
-1. Menú **File → Open project…** (o el icono de carpeta 📂 en la barra superior).
-2. Aparece el diálogo *Projects*. En la lista del servidor verás **`red-team-lab`**.
-3. Doble clic en **`red-team-lab`** (o selecciónalo y pulsa **OK**).
-4. Si ya tenías otro proyecto abierto, ciérralo antes con **File → Close project**.
+> **No uses `File → Open project`.** Ese diálogo es el **explorador de archivos de Windows** y solo ve proyectos guardados en el disco local (`C:\Users\<tu_usuario>\GNS3\projects\`). El proyecto `red-team-lab` vive en la **GNS3 VM** (servidor remoto), así que **nunca aparecerá** en ese diálogo.
+
+**Vía correcta — importar el proyecto portable:**
+
+1. Si tienes abierto el diálogo "Open project", pulsa **Cancelar**.
+2. Menú **File → Import portable project**.
+3. Navega a **`D:\Project-Red-Team\gns3\red-team-lab.gns3project`** y pulsa **Abrir**.
+4. Cuando pregunte el nombre/servidor, deja **`red-team-lab`** y elige el servidor **GNS3 VM**. Pulsa **OK**.
+5. El proyecto se abre y el canvas muestra los 8 nodos + el switch central.
+6. Arranca los nodos (▶ Start, ver §3).
+
+> El archivo `.gns3project` se regenera en cualquier momento desde Windows:
+> ```powershell
+> $base="http://192.168.116.128/v2"; $p="be75d0fb-1988-48cd-8cef-55dfa91c8aba"
+> Invoke-RestMethod "$base/projects/$p/close" -Method Post -ContentType "application/json" -Body "{}"
+> Invoke-WebRequest "$base/projects/$p/export?include_images=no" -OutFile D:\Project-Red-Team\gns3\red-team-lab.gns3project
+> ```
 
 ### Paso 2.4 — Qué se ve en el canvas
 
