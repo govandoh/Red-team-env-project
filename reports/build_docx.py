@@ -1,8 +1,14 @@
 """
-Converts MANUAL_DEMOSTRACION.md to a formatted Word document.
+Converts a Markdown report to a formatted Word document.
+
+Usage:
+    python build_docx.py                       # default: MANUAL_DEMOSTRACION.md
+    python build_docx.py GNS3_MIGRATION_DECISIONS.md
+    python build_docx.py path/to/file.md       # any .md -> same name .docx
 """
 
 import re
+import sys
 from pathlib import Path
 from docx import Document
 from docx.shared import Pt, RGBColor, Inches, Cm
@@ -10,9 +16,6 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
-
-MD_PATH = Path(__file__).parent / "MANUAL_DEMOSTRACION.md"
-OUT_PATH = Path(__file__).parent / "MANUAL_DEMOSTRACION.docx"
 
 # ── Colour palette ────────────────────────────────────────────────────────────
 C_BLACK   = RGBColor(0x1A, 0x1A, 0x1A)
@@ -312,7 +315,13 @@ def build_document(md_text: str) -> Document:
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    md_text = MD_PATH.read_text(encoding="utf-8")
+    arg = sys.argv[1] if len(sys.argv) > 1 else "MANUAL_DEMOSTRACION.md"
+    md_path = Path(arg)
+    if not md_path.is_absolute():
+        md_path = Path(__file__).parent / md_path
+    out_path = md_path.with_suffix(".docx")
+
+    md_text = md_path.read_text(encoding="utf-8")
     doc = build_document(md_text)
-    doc.save(OUT_PATH)
-    print(f"[OK] Saved: {OUT_PATH}")
+    doc.save(out_path)
+    print(f"[OK] Saved: {out_path}")
