@@ -10,6 +10,12 @@ LAB_TARGET="${LAB_TARGET:-172.20.0.20}"
 LAB_NETWORK="${LAB_NETWORK:-172.20.0.0/24}"
 EVIDENCE_ROOT="${EVIDENCE_ROOT:-/root/loot}"
 
+# Blue Team infrastructure IPs (GNS3 topology — sobreponibles via env)
+BT_WEB="${BT_WEB:-172.20.0.50}"
+BT_DNS="${BT_DNS:-172.20.0.51}"
+BT_SMB="${BT_SMB:-172.20.0.52}"
+BT_MAIL="${BT_MAIL:-172.20.0.53}"
+
 # Rechaza targets fuera de 172.20.0.0/24 — regla operativa no negociable
 validate_target() {
     local target="$1"

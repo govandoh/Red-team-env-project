@@ -1,0 +1,38 @@
+{
+  "project_id": "be75d0fb-1988-48cd-8cef-55dfa91c8aba",
+  "switch_id": "3b6b8c5b-7ba5-491e-84dd-5cc707075170",
+  "nodes": [
+    {
+      "name": "Kali-Attacker",
+      "node_id": "a61d086c-299a-42d3-96ac-55dc5f45b182"
+    },
+    {
+      "name": "BT-Web",
+      "node_id": "c5043156-737b-473b-a3b9-e6d8730e4ae9"
+    },
+    {
+      "name": "BT-DNS",
+      "node_id": "d39d889b-098c-48b2-9574-a2812f487fb9"
+    },
+    {
+      "name": "BT-SMB",
+      "node_id": "3f1804f6-9369-42fc-a355-3645f36dbe51"
+    },
+    {
+      "name": "Metasploitable2",
+      "node_id": "2555c41f-f704-4193-8225-91ec742bbfde"
+    },
+    {
+      "name": "Ubuntu-Client-1",
+      "node_id": "19b34e23-112b-4ea7-a77f-a3f8cb0e1c26"
+    },
+    {
+      "name": "Ubuntu-Client-2",
+      "node_id": "9b7bf96a-8ed8-472a-8420-6aff6337094a"
+    },
+    {
+      "name": "BT-Mail",
+      "node_id": "e027c4db-e507-425c-b24a-4ae30473fdf0"
+    }
+  ]
+}
