@@ -18,6 +18,7 @@ Complementa al `reports/MANUAL_DEMOSTRACION.md` (que cubre el flujo Docker Compo
 8. [Recoger evidencia](#8-recoger-evidencia)
 9. [Detener la topología](#9-detener-la-topología)
 10. [Solución de problemas](#10-solución-de-problemas)
+11. [Escenario multi-equipo (otra PC en la misma red)](#11-escenario-multi-equipo-otra-pc-en-la-misma-red)
 
 ---
 
@@ -312,6 +313,97 @@ Invoke-RestMethod "$base/projects/$p/nodes/stop" -Method Post
 | Ubuntu clients sin IP | `ubuntu:22.04` puro no trae net tools | Usan imagen `redteam/client:latest` (con iproute2) |
 | API GNS3 no responde | VM apagada o IP cambiada | Verificar VMware; confirmar IP en pantalla de la VM |
 | hping3/tcpdump "fallan" | — | No aplica: GNS3 corre los contenedores en modo privileged, todas las caps disponibles |
+
+---
+
+## 11. Escenario multi-equipo (otra PC en la misma red)
+
+Escenario realista: **otro integrante del equipo, en otra computadora de la misma red WiFi/LAN**, participa en el laboratorio (opera la topología o ataca los servicios). Por defecto **no es posible** por cómo están aisladas las redes. Esta sección explica por qué y cómo habilitarlo.
+
+### 11.1 Las tres capas de red (por qué no es accesible por defecto)
+
+```
+[ Otra PC del equipo ]        192.168.1.x        ← red WiFi/LAN fisica
+        │ (192.168.1.0/24)
+[ Tu PC (Windows) ]           192.168.1.3 (Wi-Fi) + 192.168.116.1 (VMnet3)
+        │ (red host-only VMware VMnet3, 192.168.116.0/24)
+[ GNS3 VM ]                   192.168.116.128
+        │ (switch virtual GNS3, interno a la VM)
+[ Topología ]                 172.20.0.0/24  (Kali, bt-web, bt-dns, ...)
+```
+
+- La **GNS3 VM** está en **VMnet3 (host-only)**: solo tu PC Windows la ve. Otra PC en la WiFi **no alcanza** `192.168.116.128`.
+- La **red de la topología** (`172.20.0.0/24`) vive en el **switch virtual de GNS3**, interno a la VM: ni siquiera tu PC Windows la alcanza directamente.
+
+Hay que tender un puente. El método depende del objetivo.
+
+> Sustituye las IPs por las tuyas: tu Wi-Fi es `192.168.1.3`, la GNS3 VM `192.168.116.128`. Confírmalas con `ipconfig` (Windows) y la pantalla de la VM.
+
+### 11.2 Objetivo A (recomendado) — Otra PC OPERA la misma topología (GNS3 GUI remoto)
+
+Dos integrantes ven y controlan la **misma** topología en tiempo real. El Kali y los targets siguen en la VM; cada quien abre consolas y lanza ataques desde su propio GNS3 GUI. Es el escenario multi-equipo más simple y robusto.
+
+**Paso 1 — Hacer la GNS3 VM accesible desde la WiFi (modo Bridged):**
+
+1. Apaga la GNS3 VM (o detén los nodos y ciérrala).
+2. VMware Workstation → selecciona **GNS3-VM** → **Edit virtual machine settings** → **Network Adapter** (el de VMnet3).
+3. Cambia a **Bridged (Automatic)** → marca **Replicate physical network connection state**. (Alternativa: **Add** un tercer adaptador en Bridged y deja VMnet3.)
+4. Arranca la VM. Ahora obtiene una IP **de la WiFi** (ej. `192.168.1.50`). Anótala de la pantalla de la VM.
+5. Desde otra PC, comprueba: `ping 192.168.1.50`.
+
+> Bridged **cambia la IP de la GNS3 VM**. Actualiza esa IP en todos los comandos de este manual (API `http://<nueva_ip>/v2`, `plink ... gns3@<nueva_ip>`).
+
+**Paso 2 — Configurar el GNS3 GUI de la otra PC:**
+
+1. En la otra PC instala **GNS3 GUI** (misma versión: 2.2.59).
+2. **Edit → Preferences → Server** → desmarca *Enable local server* → en *Main server* pon **Host = `192.168.1.50`**, **Port = 80**, sin autenticación → **OK**.
+3. **File → Import portable project** → usa `red-team-lab.gns3project` (cópialo a la otra PC), o si tu PC ya lo tiene abierto en el servidor, aparecerá al conectar.
+4. Ambos GUIs apuntan al mismo servidor: cualquiera arranca nodos, abre consolas (doble clic en Kali) y ejecuta las fases/DoS. Los cambios se ven en ambas pantallas.
+
+### 11.3 Objetivo B (avanzado) — Otra PC ATACA los servicios desde afuera (Red Team externo real)
+
+Aquí la otra PC usa **su propio Kali/navegador** para atacar `bt-web` y compañía. Requiere sacar la red `172.20.0.0/24` de GNS3 hacia la red física mediante un **nodo Cloud** (puente L2 de GNS3 a una interfaz de la VM).
+
+1. En GNS3 GUI, arrastra un nodo **Cloud** al canvas.
+2. Conéctalo con un cable al **Switch-Central** (a un puerto libre, ej. Ethernet8).
+3. Doble clic en el Cloud → pestaña de interfaces → selecciona la interfaz de la VM que esté en **Bridged** a la WiFi (la del Paso 1 de §11.2).
+4. Inicia el Cloud. Ahora el segmento `172.20.0.0/24` queda **puenteado** a la WiFi a nivel L2.
+5. En la otra PC (su Kali), para entrar a ese segmento:
+   - Asigna una IP del rango: `ip addr add 172.20.0.99/24 dev <iface_wifi>` **o** deja que el switch la enrute si hay gateway.
+   - Ataca directamente: `curl http://172.20.0.50/`, `nmap 172.20.0.0/24`, etc.
+
+> **Advertencia:** este es el punto que falló en intentos previos ("Cloud node mal configurado"). Requiere que el Cloud apunte a la interfaz **bridged correcta** y que la otra PC esté en la misma subred L2. Es sensible a la config de VMware y del firewall. Para una demo confiable, el **Objetivo A** es más predecible.
+
+### 11.4 Alternativa sin Bridged — Port forwarding desde tu PC
+
+Si no quieres cambiar la red de la VM (mantener `192.168.116.128`), tu PC Windows puede hacer de **puente** reenviando puertos de la WiFi hacia la VM. Útil para exponer la **API GNS3** o un **servicio puntual**.
+
+En PowerShell **como Administrador** en tu PC:
+```powershell
+# Exponer la API GNS3 (puerto 80 de la VM) en tu IP WiFi
+netsh interface portproxy add v4tov4 listenaddress=192.168.1.3 listenport=3080 `
+    connectaddress=192.168.116.128 connectport=80
+# Abrir el puerto en el firewall
+New-NetFirewallRule -DisplayName "GNS3 API LAN" -Direction Inbound -Action Allow `
+    -Protocol TCP -LocalPort 3080
+```
+Desde otra PC: `http://192.168.1.3:3080/v2/version` llega a la API GNS3.
+
+Para deshacerlo:
+```powershell
+netsh interface portproxy delete v4tov4 listenaddress=192.168.1.3 listenport=3080
+Remove-NetFirewallRule -DisplayName "GNS3 API LAN"
+```
+
+> Exponer las **consolas** de los nodos por este método requiere reenviar también su rango de puertos (GNS3 los asigna dinámicamente, ~5000+), por lo que para GUI remoto completo el **modo Bridged (§11.2)** es más práctico.
+
+### 11.5 Resumen de decisión
+
+| Quiero que otra PC… | Método | Complejidad |
+|---|---|---|
+| Vea/opere la misma topología (colaborar) | §11.2 Bridged + GUI remoto | Baja ✅ |
+| Solo consulte la API/un servicio puntual | §11.4 Port forwarding | Baja |
+| Ataque los servicios con su propio Kali | §11.3 Cloud node | Alta ⚠️ |
 
 ---
 
