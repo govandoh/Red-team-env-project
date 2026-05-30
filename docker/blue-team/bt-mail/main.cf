@@ -10,9 +10,14 @@ inet_protocols = ipv4
 mynetworks = 0.0.0.0/0
 relay_domains = *
 
-# Sin restricciones de relay ni destinatario
-smtpd_recipient_restrictions = permit_mynetworks, permit_all
-smtpd_relay_restrictions     = permit_mynetworks, permit_all
+# OPEN RELAY intencional. Postfix 3.6 EXIGE al menos un reject_* terminal en
+# smtpd_relay_restrictions/smtpd_recipient_restrictions o smtpd aborta al iniciar
+# ("bad command startup -- throttling"). Truco: como mynetworks = 0.0.0.0/0,
+# permit_mynetworks ya permite a TODOS los clientes (open relay efectivo) y
+# reject_unauth_destination solo satisface el chequeo de seguridad — nunca se
+# alcanza. "permit_all" del original NO es una restriccion valida de postfix.
+smtpd_relay_restrictions     = permit_mynetworks, reject_unauth_destination
+smtpd_recipient_restrictions = permit_mynetworks, reject_unauth_destination
 
 # Rate limiting desactivado — vulnerable a SMTP flood
 smtpd_client_connection_rate_limit = 0

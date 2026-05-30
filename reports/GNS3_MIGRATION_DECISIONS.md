@@ -75,8 +75,8 @@ El laboratorio tiene un dry run exitoso en `master` con evidencia generada. Romp
 |---|---|---|---|
 | Kali | 172.20.0.10 | `redteam/kali:latest` | Atacante (Red Team) |
 | Metasploitable2 | 172.20.0.20 | `tleemcjr/metasploitable2` | Objetivo clásico (mantenido) |
-| Ubuntu Client-1 | 172.20.0.30 | `ubuntu:22.04` | Cliente pasivo |
-| Ubuntu Client-2 | 172.20.0.31 | `ubuntu:22.04` | Cliente pasivo |
+| Ubuntu Client-1 | 172.20.0.30 | `redteam/client:latest` (GNS3) / `ubuntu:22.04` (Compose) | Cliente pasivo — ver §11.4 |
+| Ubuntu Client-2 | 172.20.0.31 | `redteam/client:latest` (GNS3) / `ubuntu:22.04` (Compose) | Cliente pasivo — ver §11.4 |
 | bt-web | 172.20.0.50 | `blueteam/bt-web:latest` | Servidor web Apache2 (Blue Team) |
 | bt-dns | 172.20.0.51 | `blueteam/bt-dns:latest` | Servidor DNS BIND9 (Blue Team) |
 | bt-smb | 172.20.0.52 | `blueteam/bt-smb:latest` | Servidor de archivos Samba (Blue Team) |
@@ -169,13 +169,15 @@ Cada servidor Blue Team se implementa como un contenedor Docker ligero basado en
 | Configuración | Estado | Riesgo |
 |---|---|---|
 | `mynetworks = 0.0.0.0/0` | Open relay | Acepta relay de correo desde cualquier IP |
-| `smtpd_recipient_restrictions = permit_all` | Sin restricción | Acepta cualquier destinatario |
+| `smtpd_relay_restrictions = permit_mynetworks, reject_unauth_destination` | Open relay efectivo | `permit_mynetworks` con mynetworks=0.0.0.0/0 permite a todos; el `reject` nunca se alcanza |
 | `smtpd_client_connection_rate_limit = 0` | Sin límite | Vulnerable a SMTP flood |
 | `smtpd_sasl_auth_enable = no` | Sin autenticación | Cualquiera puede enviar |
 
 **Credenciales del sistema:** `mailuser:mail123`, `postmaster:admin`
 
 **Objetivo de ataque:** Verificar open relay enviando correo con `telnet` al puerto 25, enumeración de usuarios con `VRFY`, y SYN flood con `hping3 -S -p 25`.
+
+> **Corrección 2026-05-29:** la versión inicial del `main.cf` usaba `smtpd_recipient_restrictions = permit_all`. `permit_all` **NO es una restricción válida de Postfix**, y además Postfix 3.6 aborta el arranque de `smtpd` ("bad command startup -- throttling") si no hay al menos un `reject_*` terminal. El resultado: `master` escuchaba en :25 pero cada `smtpd` moría al instante (sin banner SMTP). La corrección usa `permit_mynetworks, reject_unauth_destination` — como `mynetworks = 0.0.0.0/0`, `permit_mynetworks` ya permite a cualquier cliente (open relay intacto) y el `reject` solo satisface el chequeo de seguridad de Postfix sin llegar a ejecutarse. Verificado: banner `220 bt-mail.lab.local ESMTP Postfix`.
 
 ---
 
@@ -343,3 +345,72 @@ D:\Project-Red-Team\
 | 8 | Ejecutar demostración final DoS vs bt-web | Verificación exitosa |
 
 La guía detallada de instalación y configuración de GNS3 está en `gns3/README-gns3-setup.md`.
+
+---
+
+## 11. Decisiones de Ejecución (2026-05-29)
+
+Esta sección documenta las decisiones tomadas al **construir y verificar realmente** la topología, que difieren o amplían el plan teórico de las secciones anteriores. La topología quedó **funcional end-to-end** con los 8 nodos operativos.
+
+### 11.1 Build dentro de la GNS3 VM en vez de transferir el `.tar`
+
+**Plan original (sección §10, paso 4):** construir las imágenes en Windows, exportarlas con `docker save` y transferirlas con `scp`.
+
+**Problema encontrado:** la imagen `redteam/kali` pesa **1064 MB**. La transferencia SCP iba a ~300 kB/s (>50 minutos estimados) por el rendimiento de la red SSH hacia la VM.
+
+**Decisión:** transferir solo el **código fuente** (`docker/`, `scripts/`, `playbooks/` — pocos KB) y ejecutar `docker build` **dentro de la GNS3 VM**, que tiene acceso a internet por el adaptador NAT. La VM descarga las imágenes base (kali-rolling, ubuntu) directamente desde Docker Hub a velocidad de banda ancha.
+
+**Implicación operativa:** al modificar un script o Dockerfile, se re-transfiere solo el archivo cambiado con `pscp` y se reconstruye la imagen en la VM. No se usa `docker save`/`load`.
+
+### 11.2 GNS3 reutiliza el contenedor en stop/start
+
+**Hallazgo crítico:** al cambiar la configuración de un nodo Docker en GNS3 (imagen, variables de entorno, `start_command`) y reiniciarlo con stop→start, **GNS3 reutiliza el contenedor existente y NO aplica los cambios**.
+
+**Decisión:** para aplicar cualquier cambio de configuración hay que **borrar el nodo y recrearlo** desde el template (vía API REST o GUI). Esto se automatizó en los scripts de despliegue.
+
+### 11.3 Asignación de IP: tres mecanismos según la imagen
+
+El entrypoint que lee `CONTAINER_IP` (sección §5) solo funciona en imágenes **propias**. Las imágenes de terceros no lo tienen:
+
+| Imagen | Mecanismo de IP | Razón |
+|---|---|---|
+| `redteam/kali`, `blueteam/bt-*` | Entrypoint `CONTAINER_IP` (propio) | Dockerfiles propios con el entrypoint |
+| `tleemcjr/metasploitable2` | `start_command` con `ifconfig eth0 172.20.0.20 ...` | Imagen 3rd-party sin entrypoint propio; sí tiene `ifconfig` |
+| Ubuntu clients | Imagen nueva `redteam/client` (ver §11.4) | `ubuntu:22.04` puro no trae `ip` ni `ifconfig` |
+
+### 11.4 Nueva imagen `redteam/client` para los Ubuntu
+
+**Problema:** `ubuntu:22.04` puro **no incluye `iproute2` ni `ifconfig`**, y la red del lab está **aislada sin internet**, por lo que no se puede `apt install` en caliente dentro del contenedor. Sin esas herramientas, los clientes no pueden auto-configurar su IP.
+
+**Decisión:** crear `docker/client/Dockerfile` — imagen basada en `ubuntu:22.04` con `iproute2`, `iputils-ping`, `curl`, `netcat-openbsd` y el mismo entrypoint `CONTAINER_IP` que el Kali. Los nodos Ubuntu-Client-1/2 usan `redteam/client:latest` en lugar de `ubuntu:22.04`.
+
+**Nota:** en Docker Compose (master) los clientes siguen usando `ubuntu:22.04` sin problema, porque ahí Docker asigna la IP automáticamente (no se necesitan net tools dentro del contenedor). El cambio a `redteam/client` aplica **solo a GNS3**.
+
+### 11.5 Automatización vía API REST de GNS3
+
+**Decisión:** en lugar de crear templates y topología manualmente en la GUI, se automatizó todo vía la **API REST de GNS3** (`http://192.168.116.128/v2`, puerto 80, sin autenticación). Esto incluye: creación de los 7 templates Docker, instanciación de los 8 nodos + switch de 16 puertos, creación de los 8 enlaces, y arranque de la topología. Los IDs resultantes se guardan en `gns3/topology-state.json`.
+
+**Beneficio:** la topología es reproducible por script y no depende de arrastrar nodos a mano en la GUI.
+
+### 11.6 Resumen de archivos nuevos/modificados en esta fase
+
+```
+docker/client/Dockerfile              [NUEVO   — cliente Ubuntu con net tools]
+docker/blue-team/bt-mail/main.cf      [MODIFICADO — fix open relay Postfix]
+gns3/verify-sweep.sh                  [NUEVO   — verificación end-to-end desde Kali]
+gns3/topology-state.json              [NUEVO   — IDs de proyecto/nodos GNS3]
+```
+
+### 11.7 Estado de verificación final (2026-05-29)
+
+| Nodo | IP | Servicio verificado |
+|---|---|---|
+| Kali-Attacker | .10 | IP auto-configurada, herramientas operativas |
+| Metasploitable2 | .20 | Puertos 21, 22, 23, 80, 445 abiertos |
+| Ubuntu-Client-1/2 | .30/.31 | UP (responden a ping) |
+| bt-web | .50 | HTTP 200 |
+| bt-dns | .51 | Resuelve `lab.local` (NOERROR, registros A) |
+| bt-smb | .52 | Shares `public` y `private` visibles sin auth |
+| bt-mail | .53 | Banner SMTP `220 bt-mail.lab.local ESMTP Postfix` |
+
+**Todos los nodos responden. La topología está lista para la demostración.**
