@@ -122,8 +122,9 @@ En GNS3 GUI → Edit > Preferences > Docker containers → **New** para cada tem
 | Adapters | 1 |
 | Start command | `/bin/bash` |
 | Console type | `telnet` |
-| Extra host capabilities | `NET_ADMIN,NET_RAW` |
 | Environment | `CONTAINER_IP=172.20.0.10` |
+
+> Nota: GNS3 corre los contenedores en modo privileged (todas las capabilities), así que `NET_ADMIN`/`NET_RAW` para hping3/tcpdump ya están disponibles sin configurar nada extra.
 
 ### Metasploitable2
 | Campo | Valor |
@@ -229,9 +230,9 @@ ip addr add 172.20.0.10/24 dev eth0
 ip link set eth0 up
 ```
 
-**Kali no tiene NET_ADMIN/NET_RAW — `hping3` o `tcpdump` fallan**
+**`hping3` o `tcpdump` — capabilities de red**
 
-En GNS3 GUI → Edit > Preferences > Docker containers → Kali template → verificar que el campo "Extra host capabilities" contiene `NET_ADMIN,NET_RAW`.
+No aplica en GNS3 2.2: el servidor ejecuta TODOS los contenedores Docker en **modo privileged** (`CapAdd=[ALL]`, `CapEff=000001ffffffffff`), por lo que `NET_ADMIN` y `NET_RAW` ya están disponibles. Verificado empíricamente: `tcpdump` captura y `hping3 -S` recibe SYN-ACK sin ajustes. El campo "Extra host capabilities" del template es innecesario (y la API REST de templates lo rechaza).
 
 **smbd no inicia — error "Failed to find target server"**
 

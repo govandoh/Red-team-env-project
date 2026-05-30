@@ -112,13 +112,17 @@ def parse_table(doc, table_lines: list[str]):
     for line in table_lines:
         if re.match(r"^\|[-| :]+\|$", line.strip()):
             continue  # separator row
-        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        # Proteger pipes escapados (\|) antes de dividir por columnas
+        protected = line.strip().strip("|").replace(r"\|", "\x00")
+        cells = [c.strip().replace("\x00", "|") for c in protected.split("|")]
         rows.append(cells)
 
     if not rows:
         return
 
     ncols = len(rows[0])
+    # Normalizar cada fila a ncols (truncar sobrantes, rellenar faltantes)
+    rows = [(r + [""] * ncols)[:ncols] for r in rows]
     tbl = doc.add_table(rows=len(rows), cols=ncols)
     tbl.alignment = WD_TABLE_ALIGNMENT.LEFT
     tbl.style = "Table Grid"
