@@ -9,15 +9,13 @@
 
 ## Integrantes del equipo Red Team
 
-> Completar con los datos del equipo.
-
 | Nombre completo | Carné | Rol en el equipo |
 |---|---|---|
-| _________________________ | __________ | Líder / Operador de ataque |
-| _________________________ | __________ | Analista de enumeración |
-| _________________________ | __________ | Operador DoS |
-| _________________________ | __________ | Documentación / Evidencia |
-| _________________________ | __________ | Soporte / Blue Team liaison |
+| Gerardo Antonio Ovando Hernandez | 9490-21-7 | Líder / Operador de ataque |
+| Nancy Noemy Mazariegos Morataya | 9490-22-2692 | Analista de enumeración |
+| Samuel Estuardo España Son | 9490-22-11789 | Operador DoS |
+| Wendy Celeste Nathaly Estrada González | 9490-22-3630 | Documentación / Evidencia |
+| Diego Antonio Beteta Garcia | 9490-22-12878 | Soporte / Blue Team liaison |
 
 ---
 
@@ -235,7 +233,7 @@ LAB_TARGET=172.20.0.20 bash /root/scripts/phase-5-exploitation/web-shells.sh
 
 ### 6.6 Fase 6 — DoS
 
-**Operador responsable:** _________________________
+**Operador responsable:** Samuel Estuardo España Son
 **Ventana de ataque:** 08:23 – 08:25 (30 de mayo de 2026)
 **Blue Team notificado por:** escrito (canal del equipo)
 **Objetivo:** `bt-web` (172.20.0.50:80) — Apache2 con `MaxRequestWorkers=20`, `KeepAliveTimeout=300`
@@ -354,7 +352,7 @@ El valor del ejercicio para el equipo fue doble: validó una **metodología PTES
 
 ```
 Vector:                   Slowloris
-Operador:                 _____________________ (completar)
+Operador:                 Samuel Estuardo España Son
 Hora inicio (HH:MM:SS):   08:23:40
 Hora fin (HH:MM:SS):      08:24:41
 Duración real (segundos): 60
@@ -365,7 +363,7 @@ Latencia pico (ms):       3000 ms (timeout / HTTP 000)
 Códigos HTTP observados:  200 (27 muestras) / 000 (14 muestras)
 Servicio caído:           Sí (degradado a caído durante la ventana)
 Tiempo de recuperación:   ~15 segundos tras cesar el ataque
-Detección por Blue Team:  [ completar: Sí / No / Parcial ]
+Detección por Blue Team:  No (entorno académico aislado, sin IDS activo)
 Notas adicionales:        Apache con MaxRequestWorkers=20; pool agotado
                           por 500 conexiones lentas. Evidencia: monitor.csv,
                           slowloris.pcap (1.2 MB), slowloris-report.html
