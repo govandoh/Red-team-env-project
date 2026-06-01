@@ -67,9 +67,10 @@ switch ($Fase) {
     }
 
     2 {
-        Write-Host "=== FASE 2 — Escaneo de puertos ===" -ForegroundColor Cyan
-        # Solo el escaneo principal (nmap -sS -sV -O -p-); el NSE vuln se omite por tiempo
-        kali_run "LAB_TARGET=$TARGET bash /root/scripts/phase-2-scanning/port-scan.sh"
+        Write-Host "=== FASE 2 — Escaneo de puertos (puertos clave, modo demo) ===" -ForegroundColor Cyan
+        & "$PUTTY\pscp.exe" -batch -pw $PW "$PSScriptRoot\demo-fase2-scan.sh" "gns3@${IP}:/tmp/demo-fase2-scan.sh" | Out-Null
+        & "$PUTTY\plink.exe" -batch -pw $PW "gns3@$IP" `
+            "docker exec -i $KALI bash < /tmp/demo-fase2-scan.sh"
         Extract-Evidence "phase-2-scanning" "phase-2-scanning"
     }
 
@@ -89,12 +90,14 @@ switch ($Fase) {
     }
 
     5 {
-        Write-Host "=== FASE 5 — Explotacion: vsftpd backdoor (CVE-2011-2523) ===" -ForegroundColor Cyan
+        Write-Host "=== FASE 5a — Explotacion: vsftpd backdoor → root (CVE-2011-2523) ===" -ForegroundColor Cyan
         kali_run "LAB_TARGET=$TARGET bash /root/scripts/phase-5-exploitation/msf-exploit.sh"
+        Extract-Evidence "phase-5-exploitation" "phase-5-exploitation"
         Write-Host ""
-        Write-Host "=== FASE 5 — Explotacion: SQL Injection (DVWA) ===" -ForegroundColor Cyan
-        kali_run "LAB_TARGET=$TARGET bash /root/scripts/phase-5-exploitation/web-sqli.sh"
-        # Extrae la ultima sesion (la mas reciente es web-sqli; msf quedo la anterior)
+        Write-Host "=== FASE 5b — Explotacion: SQL Injection DVWA (7 bases de datos) ===" -ForegroundColor Cyan
+        & "$PUTTY\pscp.exe" -batch -pw $PW "$PSScriptRoot\demo-fase5-sqli.sh" "gns3@${IP}:/tmp/demo-fase5-sqli.sh" | Out-Null
+        & "$PUTTY\plink.exe" -batch -pw $PW "gns3@$IP" `
+            "docker exec -i $KALI bash < /tmp/demo-fase5-sqli.sh"
         Extract-Evidence "phase-5-exploitation" "phase-5-exploitation"
     }
 
