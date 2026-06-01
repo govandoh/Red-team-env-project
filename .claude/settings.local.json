@@ -44,7 +44,10 @@
       "Bash(C:/Program Files/PuTTY/plink.exe *)",
       "Bash('C:/Program Files/PuTTY/plink.exe' -batch -pw gns3 gns3@192.168.116.128 'docker exec GNS3.Kali-Attacker.be75d0fb-1988-48cd-8cef-55dfa91c8aba sh -c '\\\\''nslookup lab.local 172.20.0.51 2>&1 | tail -6'\\\\''')",
       "Bash('C:/Program Files/PuTTY/plink.exe' -batch -pw gns3 gns3@192.168.116.128 'docker exec GNS3.BT-DNS.be75d0fb-1988-48cd-8cef-55dfa91c8aba sh -c '\\\\''dig +short @127.0.0.1 lab.local A; dig +short @127.0.0.1 www.lab.local A'\\\\'' 2>&1')",
-      "Bash('C:/Program Files/PuTTY/plink.exe' -batch -pw gns3 gns3@192.168.116.128 'docker exec GNS3.BT-DNS.be75d0fb-1988-48cd-8cef-55dfa91c8aba dig @127.0.0.1 lab.local A +time=3 +tries=1')"
+      "Bash('C:/Program Files/PuTTY/plink.exe' -batch -pw gns3 gns3@192.168.116.128 'docker exec GNS3.BT-DNS.be75d0fb-1988-48cd-8cef-55dfa91c8aba dig @127.0.0.1 lab.local A +time=3 +tries=1')",
+      "Bash(curl -s http://192.168.116.128/v2/projects/be75d0fb-1988-48cd-8cef-55dfa91c8aba/nodes)",
+      "Bash(ls evidence/phase-6/)",
+      "Bash(ls evidence/phase-6-dos/)"
     ]
   }
 }
