@@ -75,11 +75,11 @@ switch ($Fase) {
     }
 
     3 {
-        Write-Host "=== FASE 3 — Enumeracion HTTP ===" -ForegroundColor Cyan
-        kali_run "LAB_TARGET=$TARGET bash /root/scripts/phase-3-enumeration/enum-http.sh"
-        Write-Host ""
-        Write-Host "=== FASE 3 — Enumeracion SMB ===" -ForegroundColor Cyan
-        kali_run "LAB_TARGET=$TARGET bash /root/scripts/phase-3-enumeration/enum-smb.sh"
+        Write-Host "=== FASE 3 — Enumeracion HTTP + SMB (modo demo) ===" -ForegroundColor Cyan
+        # Usa script dedicado: gobuster + enum4linux (sin nikto que tarda 10+ min)
+        & "$PUTTY\pscp.exe" -batch -pw $PW "$PSScriptRoot\demo-fase3-enum.sh" "gns3@${IP}:/tmp/demo-fase3-enum.sh" | Out-Null
+        & "$PUTTY\plink.exe" -batch -pw $PW "gns3@$IP" `
+            "docker exec -i $KALI bash < /tmp/demo-fase3-enum.sh"
         Extract-Evidence "phase-3-enumeration" "phase-3-enumeration"
     }
 

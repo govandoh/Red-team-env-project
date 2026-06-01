@@ -43,19 +43,18 @@ Write-Host ""
 
 # ── 3. Obtener ruta de evidencia y copiar del contenedor a la VM ────────────
 Write-Host "[3/4] Extrayendo evidencia del contenedor Kali..." -ForegroundColor Yellow
-$EVIDENCE_DIR = plink_run "docker exec $KALI cat /tmp/dos-evidence-dir 2>/dev/null"
+$EVIDENCE_DIR = (plink_run "docker exec $KALI cat /tmp/dos-evidence-dir 2>/dev/null").Trim()
+
+# Fallback: si /tmp/dos-evidence-dir fue limpiado por systemd-tmpfiles, buscar con find
 if (-not $EVIDENCE_DIR -or $EVIDENCE_DIR -notmatch "phase-6") {
-    Write-Host "[ERROR] No se encontro ruta de evidencia en /tmp/dos-evidence-dir" -ForegroundColor Red
+    $EVIDENCE_DIR = (plink_run "docker exec $KALI find /root/loot/phase-6-dos-btweb -maxdepth 1 -mindepth 1 -type d 2>/dev/null | sort -r | head -1").Trim()
+    if ($EVIDENCE_DIR) { Write-Host "  (usando ultima carpeta disponible: $EVIDENCE_DIR)" -ForegroundColor Yellow }
+}
+if (-not $EVIDENCE_DIR) {
+    Write-Host "[ERROR] No hay evidencia de Fase 6 en el contenedor. Ejecuta primero el ataque." -ForegroundColor Red
     exit 1
 }
 Write-Host "  Ruta en contenedor: $EVIDENCE_DIR"
-
-# Fallback: si /tmp/dos-evidence-dir fue limpiado, tomar la carpeta más reciente
-if (-not $EVIDENCE_DIR -or $EVIDENCE_DIR -notmatch "phase-6") {
-    $EVIDENCE_DIR = (plink_run "docker exec $KALI bash -c 'ls -td /root/loot/phase-6-dos-btweb/*/ 2>/dev/null | head -1 | tr -d """ '").Trim()
-    Write-Host "  (usando ultima carpeta disponible: $EVIDENCE_DIR)"
-    if (-not $EVIDENCE_DIR) { Write-Host "[ERROR] No hay evidencia de Fase 6 en el contenedor" -ForegroundColor Red; exit 1 }
-}
 
 # Copia la carpeta por su nombre al /tmp de la GNS3 VM (evita el path "/." que bloquea pscp)
 $REMOTE_DIRNAME = ($EVIDENCE_DIR -split "/")[-1]
