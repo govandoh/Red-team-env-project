@@ -47,7 +47,32 @@
       "Bash('C:/Program Files/PuTTY/plink.exe' -batch -pw gns3 gns3@192.168.116.128 'docker exec GNS3.BT-DNS.be75d0fb-1988-48cd-8cef-55dfa91c8aba dig @127.0.0.1 lab.local A +time=3 +tries=1')",
       "Bash(curl -s http://192.168.116.128/v2/projects/be75d0fb-1988-48cd-8cef-55dfa91c8aba/nodes)",
       "Bash(ls evidence/phase-6/)",
-      "Bash(ls evidence/phase-6-dos/)"
+      "Bash(ls evidence/phase-6-dos/)",
+      "PowerShell($t = Get-Date; cd \"D:\\\\Project-Red-Team\"; .\\\\gns3\\\\demo-fase.ps1 -Fase 2; Write-Host \"TIEMPO FASE 2: $\\([int]\\(\\(Get-Date\\)-$t\\).TotalSeconds\\)s\")",
+      "PowerShell($t = Get-Date; cd \"D:\\\\Project-Red-Team\"; .\\\\gns3\\\\demo-fase.ps1 -Fase 2; Write-Host \"TIEMPO: $\\([int]\\(\\(Get-Date\\)-$t\\).TotalSeconds\\)s\" -ForegroundColor Magenta)",
+      "PowerShell($t = Get-Date; cd \"D:\\\\Project-Red-Team\"; .\\\\gns3\\\\demo-fase.ps1 -Fase 3; Write-Host \"TIEMPO: $\\([int]\\(\\(Get-Date\\)-$t\\).TotalSeconds\\)s\" -ForegroundColor Magenta)",
+      "Bash(curl -s -X POST \"http://192.168.116.128/v2/projects/be75d0fb-1988-48cd-8cef-55dfa91c8aba/nodes/c5043156-737b-473b-a3b9-e6d8730e4ae9/stop\")",
+      "Bash(curl -s -X POST \"http://192.168.116.128/v2/projects/be75d0fb-1988-48cd-8cef-55dfa91c8aba/nodes/c5043156-737b-473b-a3b9-e6d8730e4ae9/start\")",
+      "Bash(curl -s http://192.168.116.128/v2/projects/be75d0fb-1988-48cd-8cef-55dfa91c8aba/nodes/c5043156-737b-473b-a3b9-e6d8730e4ae9)",
+      "Bash(\"C:/Program Files/PuTTY/plink.exe\" -batch -pw gns3 gns3@192.168.116.128 \"docker exec GNS3.Kali-Attacker.be75d0fb-1988-48cd-8cef-55dfa91c8aba sh /tmp/mon.sh\")",
+      "Bash(\"C:/Program Files/PuTTY/plink.exe\" -batch -pw gns3 gns3@192.168.116.128 \"docker exec GNS3.Kali-Attacker.be75d0fb-1988-48cd-8cef-55dfa91c8aba sh /root/mon.sh\")",
+      "Bash(curl -s http://192.168.116.128/v2/projects)",
+      "Bash(\"C:/Program Files/PuTTY/plink.exe\" -batch -pw gns3 gns3@192.168.116.128 \"docker ps --filter name=be75d0fb --format '{{.Names}}  {{.Status}}'\")",
+      "Bash(\"C:/Program Files/PuTTY/plink.exe\" -batch -pw gns3 gns3@192.168.116.128 \"ls /opt/gns3/projects/ 2>&1\")",
+      "Bash(\"C:/Program Files/PuTTY/plink.exe\" -batch -pw gns3 gns3@192.168.116.128 \"docker exec GNS3.Kali-Attacker.be75d0fb-1988-48cd-8cef-55dfa91c8aba sh -c 'ls -la /root/mon.sh 2>&1; echo ---; sh /root/mon.sh'\")",
+      "Bash(\"C:/Program Files/PuTTY/plink.exe\" -batch -pw gns3 gns3@192.168.116.128 \"docker ps --filter name=Kali --format '{{.Names}}'\")",
+      "Bash(\"C:/Program Files/PuTTY/plink.exe\" -batch -pw gns3 gns3@192.168.116.128 \"docker ps --filter name=GNS3 --format '{{.Names}}' | sort\")",
+      "Bash(curl -s -m5 http://192.168.116.128/v2/version)",
+      "Bash(\"C:/Program Files/PuTTY/plink.exe\" -batch -pw gns3 gns3@192.168.116.128 \"docker ps -a --format '{{.Names}}  {{.Status}}'\")",
+      "Bash(curl -s -X POST http://192.168.116.128/v2/projects/be75d0fb-1988-48cd-8cef-55dfa91c8aba/nodes/start)",
+      "Bash(curl -s -X POST http://192.168.116.128/v2/projects/be75d0fb-1988-48cd-8cef-55dfa91c8aba/open)",
+      "Bash(\"C:/Program Files/PuTTY/plink.exe\" -batch -pw gns3 gns3@192.168.116.128 \"docker ps -aq --filter name=GNS3 | xargs -r docker rm -f; echo 'limpieza OK'; docker ps -a --filter name=GNS3 --format '{{.Names}}' | wc -l\")",
+      "Bash('C:/Program Files/PuTTY/plink.exe' -batch -pw gns3 gns3@192.168.116.128 'docker exec __TRACKED_VAR__ bash -c '\\\\'' *)",
+      "Bash('C:/Program Files/PuTTY/plink.exe' -batch -pw gns3 gns3@192.168.116.128 'docker exec GNS3.Kali-Attacker.be75d0fb-1988-48cd-8cef-55dfa91c8aba bash -c '\\\\''for p in 21 22 23 80 445 3306; do nc -zw2 172.20.0.20 $p 2>/dev/null && echo \"  puerto $p OPEN\" || echo \"  puerto $p cerrado\"; done'\\\\''')",
+      "Bash(curl -s \"http://192.168.116.128/v2/projects/be75d0fb-1988-48cd-8cef-55dfa91c8aba/export?include_images=no\" -o red-team-lab-NEW.gns3project)",
+      "Bash(curl -s -X POST http://192.168.116.128/v2/projects/be75d0fb-1988-48cd-8cef-55dfa91c8aba/nodes/stop -o /dev/null -w \"HTTP %{http_code}\\\\n\")",
+      "Bash(mv -f red-team-lab-NEW.gns3project red-team-lab.gns3project)",
+      "Bash(curl -s -X POST http://192.168.116.128/v2/projects/be75d0fb-1988-48cd-8cef-55dfa91c8aba/nodes/start -o /dev/null -w \"HTTP %{http_code}\\\\n\")"
     ]
   }
 }
