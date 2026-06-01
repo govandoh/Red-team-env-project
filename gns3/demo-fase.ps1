@@ -15,9 +15,28 @@ $ErrorActionPreference = "Stop"
 $PUTTY   = "C:\Program Files\PuTTY"
 $IP      = "192.168.116.128"
 $PW      = "gns3"
-$KALI    = "GNS3.Kali-Attacker.be75d0fb-1988-48cd-8cef-55dfa91c8aba"
 $TARGET  = "172.20.0.20"
 $ROOT    = Split-Path -Parent $PSScriptRoot
+
+# ── Auto-deteccion del contenedor Kali ─────────────────────────────────────────
+# Detecta el Kali por nombre (no por project_id fijo). Asi sigue funcionando
+# aunque reimportes el proyecto y GNS3 genere un project_id nuevo.
+$kaliList = (& "$PUTTY\plink.exe" -batch -pw $PW "gns3@$IP" `
+    "docker ps --filter name=GNS3.Kali-Attacker --format '{{.Names}}'" 2>$null) `
+    | Where-Object { $_ -match 'Kali-Attacker' }
+
+if (-not $kaliList) {
+    Write-Host "[ERROR] No hay ningun contenedor Kali corriendo. Arranca la topologia primero." -ForegroundColor Red
+    exit 1
+}
+if (@($kaliList).Count -gt 1) {
+    Write-Host "[ERROR] Hay MAS DE UN Kali corriendo (proyectos duplicados):" -ForegroundColor Red
+    $kaliList | ForEach-Object { Write-Host "   $_" -ForegroundColor Red }
+    Write-Host "Elimina el duplicado y deja solo uno antes de continuar." -ForegroundColor Red
+    exit 1
+}
+$KALI = @($kaliList)[0]
+Write-Host "[i] Kali detectado: $KALI" -ForegroundColor DarkGray
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 function kali_run([string]$cmd) {

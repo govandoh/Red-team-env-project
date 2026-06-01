@@ -12,7 +12,6 @@ $ErrorActionPreference = "Stop"
 $PUTTY          = "C:\Program Files\PuTTY"
 $GNS3_IP        = "192.168.116.128"
 $GNS3_PW        = "gns3"
-$KALI           = "GNS3.Kali-Attacker.be75d0fb-1988-48cd-8cef-55dfa91c8aba"
 $SCRIPT_DIR     = Split-Path -Parent $MyInvocation.MyCommand.Path
 $PROJECT_ROOT   = Split-Path -Parent $SCRIPT_DIR
 $EVIDENCE_BASE  = "$PROJECT_ROOT\evidence\phase-6"
@@ -20,6 +19,21 @@ $EVIDENCE_BASE  = "$PROJECT_ROOT\evidence\phase-6"
 function plink_run($cmd) {
     & "$PUTTY\plink.exe" -batch -pw $GNS3_PW "gns3@$GNS3_IP" $cmd
 }
+
+# ── Auto-deteccion del contenedor Kali (por nombre, sobrevive reimportaciones) ──
+$kaliList = (& "$PUTTY\plink.exe" -batch -pw $GNS3_PW "gns3@$GNS3_IP" `
+    "docker ps --filter name=GNS3.Kali-Attacker --format '{{.Names}}'" 2>$null) `
+    | Where-Object { $_ -match 'Kali-Attacker' }
+if (-not $kaliList) {
+    Write-Host "[ERROR] No hay contenedor Kali corriendo. Arranca la topologia primero." -ForegroundColor Red
+    exit 1
+}
+if (@($kaliList).Count -gt 1) {
+    Write-Host "[ERROR] Hay mas de un Kali (proyectos duplicados). Deja solo uno." -ForegroundColor Red
+    $kaliList | ForEach-Object { Write-Host "   $_" -ForegroundColor Red }
+    exit 1
+}
+$KALI = @($kaliList)[0]
 
 Write-Host ""
 Write-Host "======================================================" -ForegroundColor Cyan
